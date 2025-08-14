@@ -1,18 +1,53 @@
 #!/bin/bash
-
-# Script profissional de preparação de EC2 Ubuntu para uso com pipeline Docker + AWS ECR
-# Autor: Hugllas & GPT-5
-# Data: 2025
+#
+# setup-ec2-ubuntu.sh - Script de Configuracao de instãncia EC2
+#
+# - Autor....................: Hugllas RS Lima 
+# - Data.....................: 2025-08-12
+# - Versão...................: 1.0.0
+#
+# Etapas:
+#    - $ ./ansible_config_host.sh
+#        - {Função para exibir cabeçalho}
+#        - {Testando a conexão com a Internet}
+#        - {Função para configurar o fuso horário para São Paulo}
+#        - {Função para instalar Docker}
+#        - {Função para instalar AWS CLI}
+#        - {Função para adicionar usuário ao grupo Docker}
+#        - {Função para login opcional no ECR}
+#        - {Função main para controlar o fluxo}
+#
+# Histórico:
+#    - v1.0.0 2025-08-12, Hugllas Lima
+#        - Cabeçalho
+#        - Discrição
+#        - Funções
+#
+# Uso:
+#   - sudo ./setup-ec2-ubuntu.sh 
+#
+# Licença: GPL-3.0
+#
 
 set -euo pipefail
 
 ## Função para exibir cabeçalho
 show_header() {
   clear
-  echo "================================================="
+  echo "================================================"
   echo " SCRIPT DE PREPARAÇÃO DA INSTÂNCIA EC2 (UBUNTU)"
-  echo "================================================="
+  echo "================================================"
   echo ""
+}
+
+## Testando a conexão com a Internet
+test_internet() {
+  echo -n "Testando conectividade externa... "
+  if ! ping -c 2 8.8.8.8 >/dev/null 2>&1; then
+    echo "[ERRO] Sem acesso à internet. Interrompendo script."
+    exit 1
+  fi
+  echo "OK"
 }
 
 ## Função para configurar o fuso horário para São Paulo
@@ -23,14 +58,22 @@ configure_timezone() {
 }
 
 ## Função para instalar Docker
-install_docker() {
-  echo "[2/5] Instalando Docker..."
-  if ! command -v docker &> /dev/null; then
+install_docker_official() {
+  echo "[3/6] Instalando Docker do repositório oficial..."
+  if ! command -v docker &>/dev/null; then
+    # Adiciona a chave GPG
+    sudo install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    sudo chmod a+r /etc/apt/keyrings/docker.gpg
+    # Adiciona o repo
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+      $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt-get update -y
-    sudo apt-get install -y docker.io
+    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
     sudo systemctl enable docker
     sudo systemctl start docker
-    echo "Docker instalado com sucesso!"
+    echo "Docker instalado com sucesso a partir do repositório oficial!"
   else
     echo "Docker já está instalado."
   fi
