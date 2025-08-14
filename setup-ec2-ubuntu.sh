@@ -127,7 +127,7 @@ main() {
   fi
 
   configure_timezone
-  install_docker
+  install_docker_official
   install_awscli
   add_user_to_docker_group
   ecr_login
