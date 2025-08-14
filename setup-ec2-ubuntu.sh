@@ -11,6 +11,7 @@
 #        - {Função para exibir cabeçalho}
 #        - {Testando a conexão com a Internet}
 #        - {Função para configurar o fuso horário para São Paulo}
+#        - {Instalando dependências}
 #        - {Função para instalar Docker}
 #        - {Função para instalar AWS CLI}
 #        - {Função para adicionar usuário ao grupo Docker}
@@ -57,6 +58,13 @@ configure_timezone() {
   echo "Timezone atual: $(timedatectl | grep 'Time zone')"
 }
 
+## Instalando dependências
+install_dependencies() {
+  echo "[2/6] Instalando dependências básicas (ca-certificates, curl, gnupg, unzip)..."
+  sudo apt-get update -y
+  sudo apt-get install -y ca-certificates curl gnupg lsb-release unzip
+}
+
 ## Função para instalar Docker
 install_docker_official() {
   echo "[3/6] Instalando Docker do repositório oficial..."
@@ -81,11 +89,21 @@ install_docker_official() {
 
 ## Função para instalar AWS CLI
 install_awscli() {
-  echo "[3/5] Instalando AWS CLI..."
+  echo "[4/6] Instalando AWS CLI pelo instalador oficial da Amazon..."
   if ! command -v aws &> /dev/null; then
-    sudo apt-get update -y
-    sudo apt-get install -y awscli
-    echo "AWS CLI instalado com sucesso!"
+    tmpdir=$(mktemp -d)
+    cd "$tmpdir"
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    unzip -q awscliv2.zip
+    sudo ./aws/install
+    cd -
+    rm -rf "$tmpdir"
+    if command -v aws &> /dev/null; then
+      echo "AWS CLI v2 instalado com sucesso!"
+    else
+      echo "[ERRO] Não foi possível instalar o AWS CLI." >&2
+      exit 1
+    fi
   else
     echo "AWS CLI já está instalado."
   fi
@@ -126,8 +144,10 @@ main() {
     exit 0
   fi
 
+  test_internet
   configure_timezone
-  install_docker_official
+  install_dependencies
+  install_docker
   install_awscli
   add_user_to_docker_group
   ecr_login
