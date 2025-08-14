@@ -10,6 +10,7 @@
 #    - $ ./ansible_config_host.sh
 #        - {Função para exibir cabeçalho}
 #        - {Testando a conexão com a Internet}
+#        - {Renomear a instância}
 #        - {Função para configurar o fuso horário para São Paulo}
 #        - {Instalando dependências}
 #        - {Função para instalar Docker & Docker Compose}
@@ -51,6 +52,25 @@ test_internet() {
     exit 1
   fi
   echo "OK"
+}
+
+## Renomear a instância
+rename_server() {
+  CUR_HOST=$(hostname)
+  read -p "Deseja renomear o servidor agora? (hostname atual: $CUR_HOST) [s/N]: " -r WANT_HOST
+  if [[ "$WANT_HOST" =~ ^([sS][iI][mM]|[sS])$ ]]; then
+    read -p "Digite o NOVO NOME para este servidor (hostname): " -r NEW_HOST
+    if [[ -z "$NEW_HOST" ]]; then
+      echo "[ERRO] O hostname não pode ser vazio. Pulando renomeação."
+      return
+    fi
+    sudo hostnamectl set-hostname "$NEW_HOST"
+    sudo sed -i "s/127.0.1.1.*$CUR_HOST/127.0.1.1\t$NEW_HOST/" /etc/hosts
+    echo "Hostname alterado para: $NEW_HOST"
+    echo "Será necessário relogar ou reiniciar para refletir totalmente."
+  else
+    echo "Renomeação do servidor pulada."
+  fi
 }
 
 ## Função para configurar o fuso horário para São Paulo
@@ -193,6 +213,7 @@ main() {
   fi
 
   test_internet
+  rename_server
   configure_timezone
   install_dependencies
   install_docker_official
